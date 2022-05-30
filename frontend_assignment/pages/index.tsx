@@ -1,13 +1,43 @@
 import detectEthereumProvider from "@metamask/detect-provider"
 import { Strategy, ZkIdentity } from "@zk-kit/identity"
 import { generateMerkleProof, Semaphore } from "@zk-kit/protocols"
-import { providers } from "ethers"
+import { providers, Contract, utils } from "ethers"
 import Head from "next/head"
 import React from "react"
 import styles from "../styles/Home.module.css"
+import Greeter from "artifacts/contracts/Greeters.sol/Greeters.json"
 
 export default function Home() {
     const [logs, setLogs] = React.useState("Connect your wallet and greet!")
+    const [event, setEvent] = React.useState('')
+
+    const contract = new Contract("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", Greeter.abi)
+    const provider = new providers.JsonRpcProvider("http://localhost:8545")
+    const contractOwner = contract.connect(provider.getSigner())
+    contractOwner.on("NewGreeting", (greeting) => {
+        // console.log("New greeting:", greeting)
+        // setEvent(greeting)
+        let gs = utils.parseBytes32String(greeting)
+        console.log({ gs })
+        setEvent(gs)
+    })
+
+    React.useEffect(() => {
+        const listener = async () => {
+            const ethersProvider = new providers.JsonRpcProvider("http://localhost:8545")
+            const greetingContract = new Contract(
+                '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+                Greeter.abi,
+                ethersProvider,
+            )
+            greetingContract.on('NewGreeting', (greeting) => {
+                let gs = utils.parseBytes32String(greeting)
+                console.log({ gs })
+                setEvent(gs)
+            })
+        }
+        listener()
+    }, [])
 
     async function greet() {
         setLogs("Creating your Semaphore identity...")
@@ -73,6 +103,8 @@ export default function Home() {
                 <p className={styles.description}>A simple Next.js/Hardhat privacy application with Semaphore.</p>
 
                 <div className={styles.logs}>{logs}</div>
+
+                <div className={styles.description}>{event}</div>
 
                 <div onClick={() => greet()} className={styles.button}>
                     Greet
